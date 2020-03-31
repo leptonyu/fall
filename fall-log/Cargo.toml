@@ -1,0 +1,18 @@
+[package]
+name = "fall-log"
+version = "0.1.0"
+authors = ["Daniel YU <i@icymint.me>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tracing = "0.1"
+tracing-log = "0.1"
+tracing-subscriber = "0.2"
+log = "0.4"
+
+chrono="0.4"
+
+
+actix-rt ="1.0"

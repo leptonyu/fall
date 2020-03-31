@@ -1,0 +1,8 @@
+[workspace]
+members = [
+  "fall-log",
+  "fall-web"
+]
+
+[patch.crates-io]
+fall-log = { path = "fall-log" }
