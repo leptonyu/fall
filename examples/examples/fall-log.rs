@@ -1,12 +1,14 @@
 use fall_log::*;
+use tracing::Span;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     let _ = FallLog::new("fall-log".to_string(), std::io::stdout()).init();
-    let span = span!(Level::INFO, "hello", trace_id = 1, span_id = 1);
+    let span = Span::from(OpenTrace::default());
     let _enter = span.enter();
     let mut fs = vec![];
     for i in 1..10 {
+        // span.record("trace_id", &i);
         fs.push(run_log(i));
     }
     for f in fs {

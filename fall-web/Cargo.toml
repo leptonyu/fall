@@ -5,9 +5,14 @@ authors = ["Daniel YU <i@icymint.me>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+# default = ["redis", "database"]
+default = []
+database = ["diesel", "r2d2"]
+redis = ["r2d2_redis", "r2d2"]
 
 [dependencies]
-fall-log = "*"
+fall-log = { path = "../fall-log" }
 actix-web = "3.0.0-alpha.1"
 actix-http = "2.0.0-alpha.2"
 actix-service = "1.0"
@@ -15,5 +20,17 @@ actix-service = "1.0"
 futures-core = "0.3"
 futures-util ="0.3"
 
-actix-rt ="1.0"
 rand = "0.7"
+
+config = "0.10"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+
+## 数据库+连接池
+diesel = { version = "1.4", optional = true, features = ["postgres", "r2d2", "chrono"] }
+## 缓存+连接池
+r2d2_redis = { version = "0.13", optional = true }
+r2d2 = {version = "0.8", optional = true }
