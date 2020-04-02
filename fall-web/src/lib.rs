@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::env::var;
 use std::time::Duration;
 
+pub use actix_web::client::Client;
 pub use actix_web::http::StatusCode;
 pub use error::FallError;
 
@@ -95,6 +96,10 @@ pub trait FallServer: Clone + Send + Sync {
     fn new_request_handler(&self) -> Self::H;
 
     fn new_log(&self) -> FallLog<Self::W>;
+
+    fn new_client(&self) -> Client {
+        Client::new()
+    }
 
     fn get_app(&self) -> &Application;
 
@@ -200,7 +205,8 @@ where
         let a = app.config(
             App::new()
                 .wrap(FallTransform::new(app.new_request_handler()))
-                .data(app.get_app().clone()),
+                .data(app.get_app().clone())
+                .data(app.new_client()),
         );
         #[cfg(feature = "redis")]
         let a = a.data(redis.clone());
