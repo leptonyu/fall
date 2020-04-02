@@ -2,6 +2,7 @@ use actix_http::body::Body;
 use actix_http::http::header;
 use actix_http::Response;
 use actix_web::http::StatusCode;
+use actix_web::http::header::ToStrError;
 use actix_web::ResponseError;
 use fall_log::*;
 use serde::Serialize;
@@ -95,6 +96,12 @@ impl ResponseError for FallError {
 impl From<config::ConfigError> for FallError {
     fn from(e: config::ConfigError) -> Self {
         FallError::IO_ERROR(Error::new(ErrorKind::InvalidData, e))
+    }
+}
+
+impl From<ToStrError> for FallError {
+    fn from(e: ToStrError) -> Self {
+        FallError::IO_ERROR(Error::new(ErrorKind::InvalidInput, e))
     }
 }
 
