@@ -33,6 +33,10 @@ impl FallClient {
         }
     }
 
+    pub fn raw_client(&self) -> &Client {
+        &self.client
+    }
+
     pub fn request<U>(&self, method: Method, url: U) -> ClientRequest
     where
         Uri: TryFrom<U>,
