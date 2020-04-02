@@ -6,6 +6,7 @@ use actix_web::dev::ServiceResponse;
 use actix_web::web::Data;
 use actix_web::web::ServiceConfig;
 use actix_web::App;
+use actix_web::Error;
 use actix_web::HttpRequest;
 use actix_web::HttpServer;
 use fall_log::span;
@@ -16,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use std::env::var;
 use std::time::Duration;
 
+pub use actix_http::body::MessageBody;
+pub use actix_service::ServiceFactory;
 pub use actix_web::http::StatusCode;
 pub use error::FallError;
 
@@ -98,6 +101,12 @@ pub trait RequestHelper {
     fn get_client(&self) -> Data<FallClient>;
 
     fn get_application(&self) -> Data<Application>;
+
+    fn get_config(&self) -> Data<Config>;
+
+    fn get<'d, T: Deserialize<'d>>(&self, key: &str) -> Result<T, FallError> {
+        Ok(self.get_config().get(key)?)
+    }
 }
 
 impl RequestHelper for ServiceRequest {
@@ -111,6 +120,9 @@ impl RequestHelper for ServiceRequest {
     fn get_application(&self) -> Data<Application> {
         self.app_data::<Application>()
             .expect("Application should exists")
+    }
+    fn get_config(&self) -> Data<Config> {
+        self.app_data::<Config>().expect("Config should exists")
     }
 }
 
@@ -126,6 +138,11 @@ impl RequestHelper for HttpRequest {
     fn get_application(&self) -> Data<Application> {
         self.app_data::<Data<Application>>()
             .expect("Application should exists")
+            .clone()
+    }
+    fn get_config(&self) -> Data<Config> {
+        self.app_data::<Data<Config>>()
+            .expect("Config should exists")
             .clone()
     }
 }
@@ -164,7 +181,17 @@ pub trait FallServer: Clone + Send + Sync {
         self.get_config().get::<DatabaseConfig>("database")?.init()
     }
 
-    fn config<T, B>(&self, app: App<T, B>) -> App<T, B> {
+    fn config<T, B>(&self, app: App<T, B>) -> App<T, B>
+    where
+        B: MessageBody,
+        T: ServiceFactory<
+            Config = (),
+            Request = ServiceRequest,
+            Response = ServiceResponse<B>,
+            Error = Error,
+            InitError = (),
+        >,
+    {
         app
     }
 }
@@ -251,7 +278,8 @@ where
             App::new()
                 .wrap(FallTransform::new(app.new_request_handler()))
                 .data(app.get_app().clone())
-                .data(app.new_client()),
+                .data(app.new_client())
+                .data(app.get_config().clone()),
         );
         #[cfg(feature = "redis")]
         let a = a.data(redis.clone());

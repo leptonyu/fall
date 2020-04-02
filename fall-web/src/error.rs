@@ -20,7 +20,6 @@ pub enum FallError {
 }
 
 impl FallError {
-    
     pub fn remote_err<E: Serialize>(code: u16, e: E) -> Self {
         let sc = StatusCode::from_u16(code).expect("StatusCode Invalid");
         let e = serde_json::to_string(&e).expect("Json encode invalid");
