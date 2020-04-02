@@ -98,11 +98,18 @@ pub trait RequestHandler {
 pub trait RequestHelper {
     fn header(&self, name: &str) -> Option<String>;
 
-    fn get_client(&self) -> Data<FallClient>;
+    fn get_data<T: 'static>(&self) -> Option<Data<T>>;
 
-    fn get_application(&self) -> Data<Application>;
-
-    fn get_config(&self) -> Data<Config>;
+    fn get_client(&self) -> Data<FallClient> {
+        self.get_data::<FallClient>().expect("Client should exists")
+    }
+    fn get_application(&self) -> Data<Application> {
+        self.get_data::<Application>()
+            .expect("Application should exists")
+    }
+    fn get_config(&self) -> Data<Config> {
+        self.get_data::<Config>().expect("Config should exists")
+    }
 
     fn get<'d, T: Deserialize<'d>>(&self, key: &str) -> Result<T, FallError> {
         Ok(self.get_config().get(key)?)
@@ -114,15 +121,8 @@ impl RequestHelper for ServiceRequest {
         Some(self.headers().get(name)?.to_str().ok()?.to_string())
     }
 
-    fn get_client(&self) -> Data<FallClient> {
-        self.app_data::<FallClient>().expect("Client should exists")
-    }
-    fn get_application(&self) -> Data<Application> {
-        self.app_data::<Application>()
-            .expect("Application should exists")
-    }
-    fn get_config(&self) -> Data<Config> {
-        self.app_data::<Config>().expect("Config should exists")
+    fn get_data<T: 'static>(&self) -> Option<Data<T>> {
+        self.app_data::<T>()
     }
 }
 
@@ -130,20 +130,9 @@ impl RequestHelper for HttpRequest {
     fn header(&self, name: &str) -> Option<String> {
         Some(self.headers().get(name)?.to_str().ok()?.to_string())
     }
-    fn get_client(&self) -> Data<FallClient> {
-        self.app_data::<Data<FallClient>>()
-            .expect("Client should exists")
-            .clone()
-    }
-    fn get_application(&self) -> Data<Application> {
-        self.app_data::<Data<Application>>()
-            .expect("Application should exists")
-            .clone()
-    }
-    fn get_config(&self) -> Data<Config> {
-        self.app_data::<Data<Config>>()
-            .expect("Config should exists")
-            .clone()
+
+    fn get_data<T: 'static>(&self) -> Option<Data<T>> {
+        self.app_data::<Data<T>>().map(Clone::clone)
     }
 }
 
@@ -181,7 +170,7 @@ pub trait FallServer: Clone + Send + Sync {
         self.get_config().get::<DatabaseConfig>("database")?.init()
     }
 
-    fn config<T, B>(&self, app: App<T, B>) -> App<T, B>
+    fn config<T, B>(&self, _client: FallClient, app: App<T, B>) -> App<T, B>
     where
         B: MessageBody,
         T: ServiceFactory<
@@ -274,11 +263,13 @@ where
     HttpServer::new(move || {
         #[allow(unused_mut)]
         let mut check = app.health_check();
+        let client = app.new_client();
         let a = app.config(
+            client.clone(),
             App::new()
                 .wrap(FallTransform::new(app.new_request_handler()))
                 .data(app.get_app().clone())
-                .data(app.new_client())
+                .data(client)
                 .data(app.get_config().clone()),
         );
         #[cfg(feature = "redis")]

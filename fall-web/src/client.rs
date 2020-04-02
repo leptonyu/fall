@@ -8,6 +8,7 @@ use awc::ws;
 use fall_log::next_open_trace;
 use std::convert::TryFrom;
 
+#[derive(Clone)]
 pub struct FallClient {
     client: Client,
     opentracing: bool,
