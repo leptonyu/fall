@@ -82,6 +82,7 @@ impl From<OpenTrace> for span::Span {
             trace_id = %ot.trace_id,
             span_id = %ot.span_id,
             parent_span_id = %ot.parent_span_id,
+            padding = Empty,
         )
     }
 }
@@ -108,6 +109,20 @@ pub fn current_trace_id() -> Option<String> {
             .data
             .get("trace_id")
             .map(Clone::clone)
+    })
+}
+
+pub fn next_open_trace() -> Option<OpenTrace> {
+    let id = &span::Span::current().id()?;
+    tracing::dispatcher::get_default(|r| {
+        let span = r.downcast_ref::<Registry>()?.span(id)?;
+        let ext = span.extensions();
+        let map = &ext.get::<ExtendedLog>()?.data;
+        Some(OpenTrace {
+            trace_id: map.get("trace_id").map(Clone::clone)?,
+            span_id: u64_hex(rand_u64()),
+            parent_span_id: map.get("span_id").map(Clone::clone)?,
+        })
     })
 }
 
@@ -176,6 +191,7 @@ impl Default for ExtendedLog {
                 "trace_id".to_string(),
                 "span_id".to_string(),
                 "parent_span_id".to_string(),
+                "padding".to_string(),
             ],
         }
     }

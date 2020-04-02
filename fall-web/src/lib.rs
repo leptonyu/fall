@@ -3,17 +3,19 @@ use crate::endpoints::HealthList;
 use crate::web::from_req;
 use actix_web::dev::ServiceRequest;
 use actix_web::dev::ServiceResponse;
+use actix_web::web::Data;
 use actix_web::web::ServiceConfig;
 use actix_web::App;
+use actix_web::HttpRequest;
 use actix_web::HttpServer;
 use fall_log::span;
 use fall_log::FallLog;
-use futures_util::future;
+use futures_util::future::FutureExt;
+use futures_util::future::LocalBoxFuture;
 use serde::{Deserialize, Serialize};
 use std::env::var;
 use std::time::Duration;
 
-pub use actix_web::client::Client;
 pub use actix_web::http::StatusCode;
 pub use error::FallError;
 
@@ -22,6 +24,7 @@ use crate::database::DatabaseConfig;
 #[cfg(feature = "redis")]
 use crate::redis::RedisConfig;
 
+pub use client::*;
 pub use config::Config;
 pub use web::{DefaultRequestHandler, FallTransform};
 
@@ -32,6 +35,7 @@ pub mod redis;
 
 pub mod endpoints;
 
+mod client;
 mod error;
 mod web;
 
@@ -72,8 +76,11 @@ pub trait RequestHandler {
         from_req(req).into()
     }
 
-    fn pre_request(&self, _req: &ServiceRequest) -> future::Ready<Result<(), actix_web::Error>> {
-        future::ok(())
+    fn pre_request<'a>(
+        &self,
+        _req: &'a ServiceRequest,
+    ) -> LocalBoxFuture<'a, Result<(), FallError>> {
+        async move { Ok(()) }.boxed_local()
     }
 
     fn post_response<B>(&self, res: ServiceResponse<B>) -> ServiceResponse<B> {
@@ -82,6 +89,44 @@ pub trait RequestHandler {
             return res.error_response(FallError::HTTP_ERROR(status, None));
         }
         res
+    }
+}
+
+pub trait RequestHelper {
+    fn header(&self, name: &str) -> Option<String>;
+
+    fn get_client(&self) -> Data<FallClient>;
+
+    fn get_application(&self) -> Data<Application>;
+}
+
+impl RequestHelper for ServiceRequest {
+    fn header(&self, name: &str) -> Option<String> {
+        Some(self.headers().get(name)?.to_str().ok()?.to_string())
+    }
+
+    fn get_client(&self) -> Data<FallClient> {
+        self.app_data::<FallClient>().expect("Client should exists")
+    }
+    fn get_application(&self) -> Data<Application> {
+        self.app_data::<Application>()
+            .expect("Application should exists")
+    }
+}
+
+impl RequestHelper for HttpRequest {
+    fn header(&self, name: &str) -> Option<String> {
+        Some(self.headers().get(name)?.to_str().ok()?.to_string())
+    }
+    fn get_client(&self) -> Data<FallClient> {
+        self.app_data::<Data<FallClient>>()
+            .expect("Client should exists")
+            .clone()
+    }
+    fn get_application(&self) -> Data<Application> {
+        self.app_data::<Data<Application>>()
+            .expect("Application should exists")
+            .clone()
     }
 }
 
@@ -97,8 +142,8 @@ pub trait FallServer: Clone + Send + Sync {
 
     fn new_log(&self) -> FallLog<Self::W>;
 
-    fn new_client(&self) -> Client {
-        Client::new()
+    fn new_client(&self) -> FallClient {
+        FallClient::new()
     }
 
     fn get_app(&self) -> &Application;
