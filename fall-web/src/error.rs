@@ -99,6 +99,9 @@ impl ResponseError for FallError {
             header::CONTENT_TYPE,
             header::HeaderValue::from_static("application/json"),
         );
+        if let FallError::REMOTE_ERROR(_, m) = self {
+            return resp.set_body(Body::from(m));
+        }
         let body = ErrorBody {
             trace_id: fall_log::current_trace_id(),
             status: resp.status().as_u16(),

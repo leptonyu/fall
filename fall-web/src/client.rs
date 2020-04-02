@@ -25,6 +25,16 @@ fn set_trace(enable: bool, req: ClientRequest) -> ClientRequest {
     req
 }
 
+pub trait ClientRequestExt {
+    fn accept_json(self) -> Self;
+}
+
+impl ClientRequestExt for ClientRequest {
+    fn accept_json(self) -> Self {
+        self.header("Content-Type", "application/json")
+    }
+}
+
 impl FallClient {
     pub fn new() -> Self {
         FallClient {
