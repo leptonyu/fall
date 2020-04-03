@@ -1,3 +1,5 @@
+use actix_http::http::HeaderName;
+use actix_http::http::HeaderValue;
 use actix_http::http::Method;
 use actix_http::http::Uri;
 use actix_http::RequestHead;
@@ -6,11 +8,13 @@ use actix_web::client::ClientRequest;
 use awc::error::HttpError;
 use awc::ws;
 use fall_log::next_open_trace;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 #[derive(Clone)]
 pub struct FallClient {
     client: Client,
+    headers: HashMap<HeaderName, HeaderValue>,
     func: fn(ClientRequest) -> ClientRequest,
 }
 
@@ -39,6 +43,7 @@ impl FallClient {
     pub fn new() -> Self {
         FallClient {
             client: Client::new(),
+            headers: HashMap::new(),
             func: ClientRequestExt::set_trace,
         }
     }
@@ -46,12 +51,27 @@ impl FallClient {
     pub fn config(self, f: fn(ClientRequest) -> ClientRequest) -> Self {
         FallClient {
             client: self.client,
+            headers: self.headers,
             func: f,
         }
     }
 
+    pub fn header(mut self, k: HeaderName, v: HeaderValue) -> Self {
+        self.headers.insert(k, v);
+        self
+    }
+
     pub fn raw_client(&self) -> &Client {
         &self.client
+    }
+
+    fn pre(&self, req: ClientRequest) -> ClientRequest {
+        let mut req = (self.func)(req);
+        let h = req.headers_mut();
+        for (k, v) in self.headers.iter() {
+            h.append(k.clone(), v.clone());
+        }
+        req
     }
 
     pub fn request<U>(&self, method: Method, url: U) -> ClientRequest
@@ -59,7 +79,7 @@ impl FallClient {
         Uri: TryFrom<U>,
         <Uri as TryFrom<U>>::Error: Into<HttpError>,
     {
-        (self.func)(self.client.request(method, url))
+        self.pre(self.client.request(method, url))
     }
 
     pub fn request_from<U>(&self, url: U, head: &RequestHead) -> ClientRequest
@@ -67,7 +87,7 @@ impl FallClient {
         Uri: TryFrom<U>,
         <Uri as TryFrom<U>>::Error: Into<HttpError>,
     {
-        (self.func)(self.client.request_from(url, head))
+        self.pre(self.client.request_from(url, head))
     }
 
     pub fn get<U>(&self, url: U) -> ClientRequest
