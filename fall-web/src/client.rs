@@ -11,28 +11,27 @@ use std::convert::TryFrom;
 #[derive(Clone)]
 pub struct FallClient {
     client: Client,
-    opentracing: bool,
-}
-
-fn set_trace(enable: bool, req: ClientRequest) -> ClientRequest {
-    if enable {
-        if let Some(s) = next_open_trace() {
-            return req
-                .header("X-B3-TraceId", s.trace_id)
-                .header("X-B3-SpanId", s.span_id)
-                .header("X-B3-ParentSpanId", s.parent_span_id);
-        }
-    }
-    req
+    func: fn(ClientRequest) -> ClientRequest,
 }
 
 pub trait ClientRequestExt {
     fn accept_json(self) -> Self;
+
+    fn set_trace(self) -> Self;
 }
 
 impl ClientRequestExt for ClientRequest {
     fn accept_json(self) -> Self {
         self.header("Content-Type", "application/json")
+    }
+    fn set_trace(self) -> Self {
+        if let Some(s) = next_open_trace() {
+            return self
+                .header("X-B3-TraceId", s.trace_id)
+                .header("X-B3-SpanId", s.span_id)
+                .header("X-B3-ParentSpanId", s.parent_span_id);
+        }
+        self
     }
 }
 
@@ -40,7 +39,14 @@ impl FallClient {
     pub fn new() -> Self {
         FallClient {
             client: Client::new(),
-            opentracing: true,
+            func: ClientRequestExt::set_trace,
+        }
+    }
+
+    pub fn config(self, f: fn(ClientRequest) -> ClientRequest) -> Self {
+        FallClient {
+            client: self.client,
+            func: f,
         }
     }
 
@@ -53,7 +59,7 @@ impl FallClient {
         Uri: TryFrom<U>,
         <Uri as TryFrom<U>>::Error: Into<HttpError>,
     {
-        set_trace(self.opentracing, self.client.request(method, url))
+        (self.func)(self.client.request(method, url))
     }
 
     pub fn request_from<U>(&self, url: U, head: &RequestHead) -> ClientRequest
@@ -61,7 +67,7 @@ impl FallClient {
         Uri: TryFrom<U>,
         <Uri as TryFrom<U>>::Error: Into<HttpError>,
     {
-        set_trace(self.opentracing, self.client.request_from(url, head))
+        (self.func)(self.client.request_from(url, head))
     }
 
     pub fn get<U>(&self, url: U) -> ClientRequest
