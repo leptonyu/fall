@@ -26,7 +26,7 @@ pub trait ClientRequestExt {
 
 impl ClientRequestExt for ClientRequest {
     fn accept_json(self) -> Self {
-        self.header("Content-Type", "application/json")
+        self.content_type("application/json")
     }
     fn set_trace(self) -> Self {
         if let Some(s) = next_open_trace() {

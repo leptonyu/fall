@@ -172,10 +172,8 @@ where
 
     pub fn max_level(self, level: Level) -> Self {
         FallLog {
-            writer: self.writer,
             max_level: level,
-            app_name: self.app_name,
-            extend_fields: self.extend_fields,
+            ..self
         }
     }
 
@@ -183,10 +181,8 @@ where
         let mut f = self.extend_fields;
         f.push(field_name);
         FallLog {
-            writer: self.writer,
-            max_level: self.max_level,
-            app_name: self.app_name,
             extend_fields: f,
+            ..self
         }
     }
 
@@ -263,7 +259,6 @@ where
         attrs.record(&mut info);
         extensions.insert(info);
     }
-
     fn on_record(&self, id: &Id, values: &Record<'_>, ctx: Context<'_, S>) {
         let span = ctx.span(id).expect("Span not found, this is a bug");
         let mut extensions = span.extensions_mut();
