@@ -261,26 +261,28 @@ where
     #[cfg(feature = "database")]
     let db = app.get_database()?;
     HttpServer::new(move || {
+        let client = app.new_client();
+        let _app = app
+            .config(client.clone(), App::new())
+            .data(client)
+            .data(app.get_config().clone())
+            .data(app.get_app().clone());
+
         #[allow(unused_mut)]
         let mut check = app.health_check();
-        let client = app.new_client();
-        let a = app.config(
-            client.clone(),
-            App::new()
-                .wrap(FallTransform::new(app.new_request_handler()))
-                .data(app.get_app().clone())
-                .data(client)
-                .data(app.get_config().clone()),
-        );
         #[cfg(feature = "redis")]
-        let a = a.data(redis.clone());
+        let _app = _app.data(redis.clone());
         #[cfg(feature = "redis")]
         check.add_check("redis", Box::new(redis.clone()));
         #[cfg(feature = "database")]
-        let a = a.data(db.clone());
+        let _app = _app.data(db.clone());
         #[cfg(feature = "database")]
         check.add_check("database", Box::new(db.clone()));
-        a.data(check).configure(endpoints).configure(config.clone())
+
+        _app.data(check)
+            .wrap(FallTransform::new(app.new_request_handler()))
+            .configure(endpoints)
+            .configure(config.clone())
     })
     .bind(addr)?
     .run()

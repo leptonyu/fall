@@ -49,11 +49,7 @@ impl FallClient {
     }
 
     pub fn config(self, f: fn(ClientRequest) -> ClientRequest) -> Self {
-        FallClient {
-            client: self.client,
-            headers: self.headers,
-            func: f,
-        }
+        FallClient { func: f, ..self }
     }
 
     pub fn header(mut self, k: HeaderName, v: HeaderValue) -> Self {

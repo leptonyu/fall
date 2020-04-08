@@ -45,7 +45,28 @@ fn rand_u64() -> u64 {
 }
 
 fn u64_hex(i: u64) -> String {
-    format!("{:x}", i)
+    format!("{:016x}", i)
+}
+
+#[cfg(test)]
+extern crate quickcheck;
+#[cfg(test)]
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+    #[test]
+    fn test_rand() {
+        assert_ne!(rand_u64(), rand_u64());
+    }
+
+    #[quickcheck]
+    fn test_hex_len(i: u64) {
+        assert_eq!(16, u64_hex(i).len());
+    }
 }
 
 impl Default for OpenTrace {
