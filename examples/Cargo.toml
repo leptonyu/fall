@@ -13,7 +13,7 @@ fall-log = { path = "../fall-log" }
 fall-web = { path = "../fall-web", features = ["redis"]}
 tracing = "0.1"
 actix-web = "3.0.0-alpha.1"
-actix-rt = "1.0"
+actix-rt = "1.1"
 
 [build-dependencies]
 vergen = "3"

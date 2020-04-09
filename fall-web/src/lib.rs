@@ -64,8 +64,8 @@ pub struct Application {
 impl Default for Application {
     fn default() -> Self {
         Application {
-            name: env!("CARGO_PKG_NAME").to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
+            name: var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set"),
+            version: var("CARGO_PKG_VERSION").expect("CARGO_PKG_VERSION not set"),
             revision: var("VERGEN_SHA_SHORT").ok(),
             commit_date: var("VERGEN_COMMIT_DATE").ok(),
             build_timestamp: var("VERGEN_BUILD_TIMESTAMP").ok(),
@@ -205,6 +205,9 @@ fn set_config(config: &mut Config, app: &mut Application) -> Result<(), config::
         .merge(config::File::with_name("app").required(false))?;
     if let Ok(name) = config.get::<String>("application.name") {
         app.name = name;
+    }
+    if let Ok(version) = config.get::<String>("application.version") {
+        app.version = version;
     }
     Ok(())
 }

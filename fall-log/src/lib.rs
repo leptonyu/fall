@@ -31,6 +31,11 @@ pub use tracing::span;
 pub use tracing::Level;
 pub use tracing_subscriber::registry::SpanRef;
 
+const TRACE_ID: &str = "trace_id";
+const SPAN_ID: &str = "span_id";
+const PARENT_SPAN_ID: &str = "parent_span_id";
+pub const PADDING: &str = "padding";
+
 /// Open tracing struct.
 ///
 ///
@@ -125,21 +130,21 @@ pub fn current_trace_id() -> Option<String> {
         let ext = span.extensions();
         ext.get::<ExtendedLog>()?
             .data
-            .get("trace_id")
+            .get(TRACE_ID)
             .map(Clone::clone)
     })
 }
 
-pub fn next_open_trace() -> Option<OpenTrace> {
+pub fn new_child_span() -> Option<OpenTrace> {
     let id = &span::Span::current().id()?;
     tracing::dispatcher::get_default(|r| {
         let span = r.downcast_ref::<Registry>()?.span(id)?;
         let ext = span.extensions();
         let map = &ext.get::<ExtendedLog>()?.data;
         Some(OpenTrace {
-            trace_id: map.get("trace_id").map(Clone::clone)?,
+            trace_id: map.get(TRACE_ID).map(Clone::clone)?,
             span_id: u64_hex(rand_u64()),
-            parent_span_id: map.get("span_id").map(Clone::clone)?,
+            parent_span_id: map.get(SPAN_ID).map(Clone::clone)?,
         })
     })
 }
@@ -202,10 +207,10 @@ impl Default for ExtendedLog {
         ExtendedLog {
             data: HashMap::new(),
             keys: vec![
-                "trace_id".to_string(),
-                "span_id".to_string(),
-                "parent_span_id".to_string(),
-                "padding".to_string(),
+                TRACE_ID.to_string(),
+                SPAN_ID.to_string(),
+                PARENT_SPAN_ID.to_string(),
+                PADDING.to_string(),
             ],
         }
     }

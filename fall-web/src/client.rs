@@ -7,7 +7,7 @@ use actix_web::client::Client;
 use actix_web::client::ClientRequest;
 use awc::error::HttpError;
 use awc::ws;
-use fall_log::next_open_trace;
+use fall_log::new_child_span;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -29,7 +29,7 @@ impl ClientRequestExt for ClientRequest {
         self.content_type("application/json")
     }
     fn set_trace(self) -> Self {
-        if let Some(s) = next_open_trace() {
+        if let Some(s) = new_child_span() {
             return self
                 .header("X-B3-TraceId", s.trace_id)
                 .header("X-B3-SpanId", s.span_id)
