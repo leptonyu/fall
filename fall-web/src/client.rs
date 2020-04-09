@@ -39,13 +39,19 @@ impl ClientRequestExt for ClientRequest {
     }
 }
 
-impl FallClient {
-    pub fn new() -> Self {
+impl Default for FallClient {
+    fn default() -> Self {
         FallClient {
             client: Client::new(),
             headers: HashMap::new(),
             func: ClientRequestExt::set_trace,
         }
+    }
+}
+
+impl FallClient {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn config(self, f: fn(ClientRequest) -> ClientRequest) -> Self {

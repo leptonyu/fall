@@ -88,8 +88,8 @@ impl ResponseError for FallError {
     fn status_code(&self) -> StatusCode {
         match self {
             FallError::IO_ERROR(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            FallError::HTTP_ERROR(s, _) => s.clone(),
-            FallError::REMOTE_ERROR(s, _) => s.clone(),
+            FallError::HTTP_ERROR(s, _) => *s,
+            FallError::REMOTE_ERROR(s, _) => *s,
         }
     }
 

@@ -86,7 +86,7 @@ impl OpenTrace {
         OpenTrace {
             trace_id: u64_hex(trace_id),
             span_id: u64_hex(span_id),
-            parent_span_id: parent_span_id.map(u64_hex).unwrap_or("".into()),
+            parent_span_id: parent_span_id.map(u64_hex).unwrap_or_else(|| "".into()),
         }
     }
 
@@ -112,11 +112,8 @@ struct EventWriter<'a>(&'a mut String);
 
 impl Visit for EventWriter<'_> {
     fn record_debug(&mut self, f: &Field, value: &dyn Debug) {
-        match f.name() {
-            "message" => {
-                let _ = write!(self.0, "{:?}", value);
-            }
-            _ => return,
+        if let "message" = f.name() {
+            let _ = write!(self.0, "{:?}", value);
         }
     }
 }

@@ -44,7 +44,7 @@ impl RedisConfig {
                     .idle_timeout(p.idle_timeout)
                     .connection_timeout(p.connection_timeout.unwrap_or(Duration::from_secs(30)))
             })
-            .unwrap_or_else(|| Pool::builder())
+            .unwrap_or_else(Pool::builder)
             .build(RedisConnectionManager::new(self.url.as_str())?)
             .map(RedisConn)?)
     }

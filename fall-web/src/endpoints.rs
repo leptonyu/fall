@@ -14,9 +14,15 @@ pub trait CheckHealth {
 
 pub struct HealthList(BTreeMap<String, Box<dyn CheckHealth>>);
 
+impl Default for HealthList {
+    fn default() -> Self {
+        HealthList(BTreeMap::new())
+    }
+}
+
 impl HealthList {
     pub fn new() -> Self {
-        HealthList(BTreeMap::new())
+        Self::default()
     }
 
     pub fn add_check(&mut self, name: &str, check: Box<dyn CheckHealth>) {
@@ -31,7 +37,7 @@ async fn info(app: Data<Application>) -> HttpResponse {
 fn modify_health(re: Result<(), FallError>, name: String, health: &mut Health) {
     let ok = re.is_ok();
     health.detail.insert(
-        String::from(name),
+        name,
         Health {
             status: {
                 if ok {
